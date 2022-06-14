@@ -1,12 +1,3 @@
-# Copyright 2020 Samson. All Rights Reserved.
-# =============================================================================
-
-"""Yolo V1.5.
-"""
-
-__version__ = "3.1"
-__author__ = "Samson Woof"
-
 from os import path
 import sys
 sys.path.append(path.join(path.dirname(__file__), '..'))
