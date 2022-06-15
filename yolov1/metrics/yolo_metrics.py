@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.metrics import binary_accuracy
-from yolov1_5.losses import cal_iou
+from yolov1.losses import cal_iou
 
 epsilon = 1e-07
 
