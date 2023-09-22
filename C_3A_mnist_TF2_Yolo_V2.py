@@ -138,7 +138,7 @@ Part B. Model Engineering
 '''
 
 '''
-1. Import Libraries
+01. Import Libraries
 '''
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input
@@ -153,17 +153,17 @@ import tensorflow as tf
 # from tensorflow.keras.layers import BatchNormalization as BN
 
 '''
-2. Hyperparameters
+02. Hyperparameters
 '''
 n_epoch = 10
 
 '''
-3. DropBlock
+03. DropBlock
 Not used
 '''
 
 '''
-4. Convolutional
+04. Leaky Convolutional
 '''
 
 def Conv2D_BN_Leaky(input_tensor, *args):
@@ -175,12 +175,19 @@ def Conv2D_BN_Leaky(input_tensor, *args):
     return output_tensor
 
 '''
-5. Residual Block
-Not Used
+05. [Not Used] Mish Activation
 '''
 
 '''
-6. Backbone
+06. [Not Used] Mish Convolutional
+'''
+
+'''
+07. [Not Used] Residual Block
+'''
+
+'''
+08. Backbone
 '''
 def Backbone_darknet(input_tensor):
     conv1 = Conv2D_BN_Leaky(input_tensor, 32, 3)
@@ -216,14 +223,17 @@ def Backbone_darknet(input_tensor):
     return output_tensor
 
 '''
-7. Neck
+09. [Not Used] SPP Module
+'''
+
+'''
+10. YOLO Neck
 '''
 def yolo_neck(input_shape=(416, 416, 3),
               backbone="darknet",
               pretrained_darknet=None):
     inputs = Input(input_shape)
     darknet = Model(inputs, Backbone_darknet(inputs))
-    
     if pretrained_darknet is not None:
         darknet.set_weights(pretrained_darknet.get_weights())
     
@@ -243,7 +253,7 @@ def yolo_neck(input_shape=(416, 416, 3),
     return model
 
 '''
-8. Head
+11. Head
 '''
 def yolo_head(model_body, class_num=10, 
               anchors=[(0.04405615, 0.05210654),
@@ -290,11 +300,11 @@ import numpy as np
 epsilon = 1e-07
 
 '''
-9. Intersection over Union
+12. Intersection over Union
 '''
 def cal_iou(xywh_true, xywh_pred, grid_shape):
     grid_shape = np.array(grid_shape[::-1])
-    xy_true = xywh_true[..., 0:2]/grid_shape # N*S*S*1*3
+    xy_true = xywh_true[..., 0:2]/grid_shape # N*S*S*1*2
     wh_true = xywh_true[..., 2:4]
 
     xy_pred = xywh_pred[..., 0:2]/grid_shape # N*S*S*B*2
@@ -322,7 +332,7 @@ def cal_iou(xywh_true, xywh_pred, grid_shape):
     return iou_scores
 
 '''
-10. Yolo Loss Function
+13. Yolo Loss Function
 '''
 def wrap_yolo_loss(grid_shape,
                    bbox_num,
@@ -346,7 +356,7 @@ def wrap_yolo_loss(grid_shape,
         xywh_pred = y_pred[..., :4] # N*S*S*B*4
 
         iou_scores = cal_iou(xywh_true, xywh_pred, grid_shape) # N*S*S*B
-
+        
         response_mask = tf.one_hot(tf.argmax(iou_scores, axis=-1),
                                    depth=bbox_num,
                                    dtype=xywh_true.dtype) # N*S*S*B
@@ -420,7 +430,7 @@ def wrap_yolo_loss(grid_shape,
     return yolo_loss
 
 '''
-11. [Opt] Define Custom Metrics 1
+14. [Opt] Define Custom Metrics 1
 Object Accuracy
 '''
 from tensorflow.keras.metrics import binary_accuracy
@@ -447,7 +457,7 @@ def wrap_obj_acc(grid_shape, bbox_num, class_num):
     return obj_acc
 
 '''
-12. [Opt] Define Custom Metrics 2
+15. [Opt] Define Custom Metrics 2
 Mean IOU
 '''
 def wrap_mean_iou(grid_shape, bbox_num, class_num):
@@ -474,7 +484,7 @@ def wrap_mean_iou(grid_shape, bbox_num, class_num):
     return mean_iou
 
 '''
-13. [Opt] Define Custom Metrics 3
+16. [Opt] Define Custom Metrics 3
 Class Accuracy
 '''
 def wrap_class_acc(grid_shape, bbox_num, class_num):
@@ -503,7 +513,7 @@ def wrap_class_acc(grid_shape, bbox_num, class_num):
     return class_acc
 
 '''
-14. Build Class for Model, Loss, Metrics
+17. Build Class for Model, Loss, Metrics
 '''
 class Yolo(object):
 
@@ -520,7 +530,7 @@ class Yolo(object):
         self.file_names = None
         
     '''
-    15. Model Create
+    18. Model Create
     '''
     def create_model(self,
                      anchors=[[0.75157846, 0.70525231],
@@ -547,7 +557,7 @@ class Yolo(object):
         self.bbox_num = len(anchors)
 
     '''
-    16. Loss Create
+    19. Loss Create
     '''
     def loss(self,
              binary_weight=1,
@@ -573,7 +583,7 @@ class Yolo(object):
             )
     
     '''
-    17. Metrics Create
+    20. Metrics Create
     '''
     def metrics(self, type="obj_acc"):
         
@@ -602,9 +612,8 @@ class Yolo(object):
 yolo = Yolo(class_names=class_names)
 
 '''
-18. Get anchor boxes
+21. Get anchor boxes
 '''
-
 from utils.kmeans import kmeans, iou_dist, euclidean_dist
 import numpy as np
 
@@ -627,8 +636,7 @@ plt.scatter(anchors[..., 0],
 plt.show()
 
 '''
-19. Build NN model
-from class
+22. Build NN model from class
 '''
 anchors = [[0.33626917, 0.40490368],
            [0.19854431, 0.24941406],
@@ -640,8 +648,15 @@ yolo.create_model(anchors=anchors)
 yolo.model.summary()
 
 '''
+23. Define Optimizer
+'''
+from tensorflow.keras.optimizers import SGD, Adam
+
+optimizer = Adam(learning_rate=1e-4)
+
+'''
 Callback function
-20. Learning Rate Scheduling
+24. Learning Rate Scheduling
 '''
 from tensorflow.keras.callbacks import LearningRateScheduler
 
@@ -656,15 +671,7 @@ def scheduler(epoch, lr):
 callback = LearningRateScheduler(scheduler)
 
 '''
-21. Define Optimizer
-'''
-from tensorflow.keras.optimizers import SGD, Adam
-
-optimizer = Adam(learning_rate=1e-4)
-
-'''
-22. Loss Function
-from YOLO class
+25. Loss Function from YOLO class
 '''
 from utils.tools import get_class_weight
 
@@ -686,13 +693,13 @@ loss_fn = yolo.loss(
     loss_weight=loss_weight
     )
 '''
-23. Build Metrics
+26. Build Metrics
 from Yolo Class
 '''
 metrics = yolo.metrics("obj+iou+class")
 
 '''
-24. Model Compilation
+27. Model Compilation
 '''
 yolo.model.compile(
     optimizer = optimizer,
@@ -705,7 +712,7 @@ import time
 start_time = time.time()
 
 '''
-25. Model Training and Validation
+28. Model Training and Validation
 '''
 train_history = yolo.model.fit(
     train_img,
@@ -718,7 +725,7 @@ train_history = yolo.model.fit(
     )
 
 '''
-26. Predict and evaluate
+29. Predict and evaluate
 '''
 prediction = yolo.model.predict(test_img)
 
@@ -735,9 +742,8 @@ finish_time = time.time()
 print(int(finish_time - start_time), "Sec")
 
 '''
-27. Show score table
+30. Show score table
 '''
-
 from utils.measurement import create_score_mat
 
 create_score_mat(
