@@ -84,7 +84,7 @@ Part B. Model Engineering
 '''
 
 '''
-1. Import Libraries
+01. Import Libraries
 '''
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input
@@ -100,17 +100,17 @@ import tensorflow as tf
 # from tensorflow.keras.layers import BatchNormalization as BN
 
 '''
-2. Hyperparameters
+02. Hyperparameters
 '''
 n_epoch = 10
 
 '''
-3. DropBlock
+03. DropBlock
 Not used
 '''
 
 '''
-4. Convolutional
+04. Leaky Convolutional
 '''
 
 def Conv2D_BN_Leaky(input_tensor, *args):
@@ -122,12 +122,19 @@ def Conv2D_BN_Leaky(input_tensor, *args):
     return output_tensor
 
 '''
-5. Residual Block
-Not Used
+05. [Not Used] Mish Activation
 '''
 
 '''
-6. Backbone
+06. [Not Used] Mish Convolutional
+'''
+
+'''
+07. [Not Used] Residual Block
+'''
+
+'''
+08. Backbone
 '''
 def Backbone_darknet(input_tensor):
     conv1 = Conv2D_BN_Leaky(input_tensor, 64, 7, 2)
@@ -162,7 +169,11 @@ def Backbone_darknet(input_tensor):
     return conv6
 
 '''
-7. Neck
+09. [Not Used] SPP Module
+'''
+
+'''
+10. YOLO Neck
 '''
 def yolo_neck(input_shape=(448, 448, 3)):
     inputs = Input(input_shape)
@@ -171,7 +182,7 @@ def yolo_neck(input_shape=(448, 448, 3)):
     return darknet
 
 '''
-8. Head
+11. Head
 '''
 def yolo_head(model_body, class_num=10):
     inputs = model_body.input
@@ -188,57 +199,87 @@ def yolo_head(model_body, class_num=10):
 input_shape=(img_size, img_size, 3)
 
 '''
-9. Intersection over Union
-Not Used
+12. [Not Used] Intersection over Union
 '''
 
 '''
-10. Loss Function
+13. Loss Function
 --> Use Built in loss
 '''
 
 '''
-11. [Opt] Define Custom Metrics 1
+14. [Opt] Define Custom Metrics 1
 Object Accuracy
 Not Used --> Built in Metrics
 '''
 
 '''
-12. [Opt] Define Custom Metrics 2
+15. [Opt] Define Custom Metrics 2
 Mean IOU
 Not Used --> Built in Metrics
 '''
 
 '''
-13. [Opt] Define Custom Metrics 3
+16. [Opt] Define Custom Metrics 3
 Class Accuracy
 Not Used --> Built in Metrics
 '''
 
 '''
-14. Build Class for Model, Loss, Metrics
---> Class not used
-    15. [Not Used] Model Create
-    16. [Not Used] Loss Create
-    17. [Not Used] Metrics Create
+17. Build Class for Model, Loss, Metrics
 '''
+class Yolo(object):
+
+    def __init__(self,
+                 input_shape=(img_size, img_size, 3),
+                 class_names=[]):
+        self.input_shape = input_shape
+        self.class_names = class_names
+        self.class_num = len(class_names)
+        self.model = None
+        self.file_names = None
+        
+    '''
+    18. Model Create
+    '''
+    def create_model(self):
+        
+        model_body = yolo_neck(self.input_shape)
+
+        self.model = yolo_head(model_body,
+                               self.class_num)
+
+    '''
+    19. [Not Used] Loss Create
+    '''
+    
+    '''
+    20. [Not Used] Metrics Create
+    '''
+
+yolo = Yolo(class_names=class_names)
 
 '''
-18. Get anchor boxes
+21. Get anchor boxes
 Not Used
 '''
 
 '''
-19. Build NN model
-from function
+22. Build NN model from class
 '''
-model_body = yolo_neck(input_shape)
+yolo.create_model()
+yolo.model.summary()
 
-model = yolo_head(model_body, num_classes)
+'''
+23. Define Optimizer
+'''
+from tensorflow.keras.optimizers import SGD, Adam
+
+optimizer = Adam(learning_rate=1e-4)
 
 '''
 Callback function
-20. Learning Rate Scheduling
+24. Learning Rate Scheduling
 '''
 from tensorflow.keras.callbacks import LearningRateScheduler
 
@@ -253,27 +294,20 @@ def scheduler(epoch, lr):
 callback = LearningRateScheduler(scheduler)
 
 '''
-21. Define Optimizer
-'''
-from tensorflow.keras.optimizers import SGD, Adam
-
-optimizer = Adam(learning_rate=1e-4)
-
-'''
-22. Loss Function
-from YOLO class
+25. Loss Function from YOLO class
+--> Built in Loss
 '''
 
 '''
-23. Build Metrics
+26. Build Metrics
 --> Built in Metrics
 '''
 metrics=['accuracy']
 
 '''
-24. Model Compilation
+27. Model Compilation
 '''
-model.compile(
+yolo.model.compile(
     optimizer = optimizer,
     loss = 'sparse_categorical_crossentropy',
     metrics = metrics
@@ -299,9 +333,9 @@ import time
 start_time = time.time()
 
 '''
-25. Model Training and Validation
+28. Model Training and Validation
 '''
-train_history = model.fit_generator(
+train_history = yolo.model.fit_generator(
     train_ds,
     steps_per_epoch = steps_per_epoch,
     epochs = n_epoch,
@@ -312,9 +346,9 @@ train_history = model.fit_generator(
     )
 
 '''
-26. Predict and evaluate
+29. Predict and evaluate
 '''
-model.evaluate_generator(test_ds, validation_steps)
+yolo.model.evaluate_generator(test_ds, validation_steps)
 
 finish_time = time.time()
 
