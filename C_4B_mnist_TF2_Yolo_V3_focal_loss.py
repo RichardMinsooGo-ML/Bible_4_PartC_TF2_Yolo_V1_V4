@@ -149,7 +149,7 @@ Part B. Model Engineering
 '''
 
 '''
-1. Import Libraries
+01. Import Libraries
 '''
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input
@@ -171,17 +171,17 @@ from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.regularizers import l2
 
 '''
-2. Hyperparameters
+02. Hyperparameters
 '''
 n_epoch = 10
 
 '''
-3. DropBlock
+03. DropBlock
 Not used
 '''
 
 '''
-4. Convolutional
+04. Leaky Convolutional
 '''
 def compose(*funcs):
     # return lambda x: reduce(lambda v, f: f(v), funcs, x)
@@ -192,7 +192,7 @@ def compose(*funcs):
 
 @wraps(Conv2D)
 def DarknetConv2D(*args, **kwargs):
-    """Wrapper to set Darknet parameters for Convolution2D."""
+    '''Wrapper to set Darknet parameters for Convolution2D.'''
     darknet_conv_kwargs = {'kernel_initializer': 'he_normal'}
     if kwargs.get('strides') == (2, 2):
         darknet_conv_kwargs['padding'] = 'valid'
@@ -202,7 +202,7 @@ def DarknetConv2D(*args, **kwargs):
     return Conv2D(*args, **darknet_conv_kwargs)
 
 def DarknetConv2D_BN_Leaky(*args, **kwargs):
-    """Darknet Convolution2D followed by BatchNormalization and LeakyReLU."""
+    '''Darknet Convolution2D followed by BatchNormalization and LeakyReLU.'''
     no_bias_kwargs = {'use_bias': False}
     no_bias_kwargs.update(kwargs)
     return compose(
@@ -211,7 +211,15 @@ def DarknetConv2D_BN_Leaky(*args, **kwargs):
         LeakyReLU(alpha=0.1))
 
 '''
-5. Residual Block
+05. [Not Used] Mish Activation
+'''
+
+'''
+06. [Not Used] Mish Convolutional
+'''
+
+'''
+07. Residual Block
 '''
 def resblock_body(x, num_filters, num_blocks):
     '''A series of resblocks starting with a downsampling Convolution2D'''
@@ -226,7 +234,7 @@ def resblock_body(x, num_filters, num_blocks):
     return x
 
 '''
-6. Backbone
+08. Backbone darknet
 '''
 def Backbone_darknet(input_tensor):
     '''Darknent body having 52 Convolution2D layers'''
@@ -239,9 +247,6 @@ def Backbone_darknet(input_tensor):
     return x
 
 
-'''
-7. Neck
-'''
 def make_last_layers(x, num_filters):
     '''6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer'''
     x = compose(
@@ -253,17 +258,22 @@ def make_last_layers(x, num_filters):
     y = DarknetConv2D_BN_Leaky(num_filters*2, (3, 3))(x)
     return x, y
 
+'''
+09. [Not Used] SPP Module
+'''
 WEIGHTS_PATH_DN_BODY    = "https://github.com/samson6460/tf2_YOLO/releases/download/1.0/tf_keras_yolov3_body.h5"
 WEIGHTS_PATH_DN53_TOP   = "https://github.com/samson6460/tf2_YOLO/releases/download/Weights/tf_keras_darknet53_448_include_top.h5"
 WEIGHTS_PATH_DN53_NOTOP = "https://github.com/samson6460/tf2_YOLO/releases/download/Weights/tf_keras_darknet53_448_no_top.h5"
 
+'''
+10. YOLO Neck
+'''
 def yolo_neck(input_shape=(416, 416, 3),
               pretrained_darknet=None,
               pretrained_weights=None):
-    """Create YOLO_V3 model CNN body in Keras."""
+    '''Create YOLO_V3 model CNN body in Keras.'''
     inputs = Input(input_shape)
     darknet = Model(inputs, Backbone_darknet(inputs))
-    
     if pretrained_darknet is not None:
         darknet.set_weights(pretrained_darknet.get_weights())
     
@@ -281,7 +291,7 @@ def yolo_neck(input_shape=(416, 416, 3),
     x = Concatenate()([x, darknet.layers[92].output])
     x, y3 = make_last_layers(x, 128)
     model = Model(inputs, [y1, y2, y3])
-
+    
     if pretrained_weights is not None:
         if pretrained_weights == "pascal_voc":
             pretrained_weights = get_file(
@@ -293,7 +303,7 @@ def yolo_neck(input_shape=(416, 416, 3),
     return model
 
 '''
-8. Head
+11. Head
 '''
 def yolo_head(model_body, class_num=10, 
               anchors=[[0.89663461, 0.78365384],
@@ -348,7 +358,7 @@ import numpy as np
 epsilon = 1e-07
 
 '''
-9. Intersection over Union
+12. Intersection over Union
 '''
 def cal_iou(xywh_true, xywh_pred, grid_shape):
     grid_shape = np.array(grid_shape[::-1])
@@ -380,7 +390,7 @@ def cal_iou(xywh_true, xywh_pred, grid_shape):
     return iou_scores
 
 '''
-10. Yolo Loss Function
+13. Yolo Loss Function
 '''
 def wrap_yolo_loss(grid_shape,
                    bbox_num,
@@ -500,7 +510,7 @@ def wrap_yolo_loss(grid_shape,
     return yolo_loss
 
 '''
-11. [Opt] Define Custom Metrics 1
+14. [Opt] Define Custom Metrics 1
 Object Accuracy
 '''
 from tensorflow.keras.metrics import binary_accuracy
@@ -527,7 +537,7 @@ def wrap_obj_acc(grid_shape, bbox_num, class_num):
     return obj_acc
 
 '''
-12. [Opt] Define Custom Metrics 2
+15. [Opt] Define Custom Metrics 2
 Mean IOU
 '''
 def wrap_mean_iou(grid_shape, bbox_num, class_num):
@@ -554,7 +564,7 @@ def wrap_mean_iou(grid_shape, bbox_num, class_num):
     return mean_iou
 
 '''
-13. [Opt] Define Custom Metrics 3
+16. [Opt] Define Custom Metrics 3
 Class Accuracy
 '''
 def wrap_class_acc(grid_shape, bbox_num, class_num):
@@ -583,7 +593,7 @@ def wrap_class_acc(grid_shape, bbox_num, class_num):
     return class_acc
 
 '''
-14. Build Class for Model, Loss, Metrics
+17. Build Class for Model, Loss, Metrics
 '''
 class Yolo(object):
 
@@ -601,7 +611,7 @@ class Yolo(object):
         self.file_names = None
         
     '''
-    15. Model Create
+    18. Model Create
     '''
     def create_model(self,
                      anchors=[[0.89663461, 0.78365384],
@@ -640,7 +650,7 @@ class Yolo(object):
         self.abox_num = len(self.anchors)//self.fpn_layers
 
     '''
-    16. Loss Create
+    19. Loss Create
     '''
     def loss(self,
              binary_weight=1,
@@ -681,7 +691,7 @@ class Yolo(object):
         return loss_list
     
     '''
-    17. Metrics Create
+    20. Metrics Create
     '''
     def metrics(self, type="obj_acc"):
         
@@ -716,9 +726,8 @@ class Yolo(object):
 yolo = Yolo(class_names=class_names)
 
 '''
-18. Get anchor boxes
+21. Get anchor boxes
 '''
-
 from utils.kmeans import kmeans, iou_dist, euclidean_dist
 import numpy as np
 
@@ -741,8 +750,7 @@ plt.scatter(anchors[..., 0],
 plt.show()
 
 '''
-19. Build NN model
-from class
+22. Build NN model from class
 '''
 anchors=[[0.26923078, 0.26923078],
          [0.20192307, 0.20192307],
@@ -758,8 +766,15 @@ yolo.create_model(anchors=anchors)
 yolo.model.summary()
 
 '''
+23. Define Optimizer
+'''
+from tensorflow.keras.optimizers import SGD, Adam
+
+optimizer = Adam(learning_rate=5e-5)
+
+'''
 Callback function
-20. Learning Rate Scheduling
+24. Learning Rate Scheduling
 '''
 from tensorflow.keras.callbacks import LearningRateScheduler
 
@@ -774,15 +789,7 @@ def scheduler(epoch, lr):
 callback = LearningRateScheduler(scheduler)
 
 '''
-21. Define Optimizer
-'''
-from tensorflow.keras.optimizers import SGD, Adam
-
-optimizer = Adam(learning_rate=5e-5)
-
-'''
-22. Loss Function
-from YOLO class
+25. Loss Function from YOLO class
 '''
 from utils.tools import get_class_weight
 
@@ -817,13 +824,13 @@ loss_fn = yolo.loss(
     use_focal_loss=use_focal_loss,
     )
 '''
-23. Build Metrics
+26. Build Metrics
 from Yolo Class
 '''
 metrics = yolo.metrics("obj+iou+class")
 
 '''
-24. Model Compilation
+27. Model Compilation
 '''
 yolo.model.compile(
     optimizer = optimizer,
@@ -836,7 +843,7 @@ import time
 start_time = time.time()
 
 '''
-25. Model Training and Validation
+28. Model Training and Validation
 '''
 train_history = yolo.model.fit(
     train_img,
@@ -849,7 +856,7 @@ train_history = yolo.model.fit(
     )
 
 '''
-26. Predict and evaluate
+29. Predict and evaluate
 '''
 prediction = yolo.model.predict(test_img, batch_size=10)
 
@@ -868,9 +875,8 @@ finish_time = time.time()
 print(int(finish_time - start_time), "Sec")
 
 '''
-26. Show score table
+30. Show score table
 '''
-
 from utils.measurement import create_score_mat
 
 create_score_mat(
